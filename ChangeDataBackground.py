@@ -20,18 +20,21 @@ import math
 
 class DataAugmentation():
     def __init__(self):
+        self.rename = 'obj_data'
+        self.obj_number = 1000
+        self.cnt = 0
         self.DIR = '/home/chien/Data_Augmentation/background'
         self.PNG = '/home/chien/Data_Augmentation/png'
-        self.Data = '/home/chien/Data_Augmentation/original_data'
+        self.Data = '/home/chien/Data_Augmentation/Extend_data'
 
-        self.datanames1 = os.listdir('/home/chien/Data_Augmentation/original_data')  
+        self.datanames1 = os.listdir('/home/chien/Data_Augmentation/Extend_data')  
         self.datanames2 = os.listdir('/home/chien/Data_Augmentation/background')
         
-        self.json_data = np.zeros([20,1]).astype(np.str)
-        self.background_data = np.zeros([20,1]).astype(np.str)
-        self.oldbackground_data = np.zeros([20,1]).astype(np.str)
-        self.output_data = np.zeros([20,1]).astype(np.str)
-        self.json_name=np.zeros([20,1]).astype(np.str)
+        self.json_data = np.zeros([self.obj_number,1]).astype(np.str)
+        self.background_data = np.zeros([self.obj_number,1]).astype(np.str)
+        self.oldbackground_data = np.zeros([self.obj_number,1]).astype(np.str)
+        self.output_data = np.zeros([self.obj_number,1]).astype(np.str)
+        self.json_name=np.zeros([self.obj_number,1]).astype(np.str)
         i = 0
         j = 0
         m = 0
@@ -49,6 +52,10 @@ class DataAugmentation():
             if os.path.splitext(dataname)[1] == '.jpg':#目录下包含.jpg的文件
                 self.oldbackground_data[m]=dataname
                 m+=1
+    def _changeLight(self, img):
+        alpha = random.uniform(0.35, 1)
+        blank = np.zeros(img.shape, img.dtype)
+        return cv2.addWeighted(img, alpha, blank, 1 - alpha, 0)
 
     def generate_data(self):
         for k in range(len([name for name in os.listdir(self.DIR) if os.path.isfile(os.path.join(self.DIR, name))])):
@@ -86,12 +93,14 @@ class DataAugmentation():
                 oldbackground = cv2.imread( self.Data +'/{}.jpg'.format(",".join(self.json_name[j]))) #oldbackground_data-->json_name
                 oldbackground = cv2.resize(oldbackground,(640,480))
                 oldbackground = cv2.cvtColor(oldbackground,cv2.COLOR_BGR2RGB)
+                
 
                 Together = cv2.bitwise_and(label_together,oldbackground) #两个图片一个是彩色，另一个是彩色，不能做位与运算，需要将第一个图灰度话后再操作
                 
                 newbackground = cv2.imread( self.DIR + '/{}'.format(",".join(self.background_data[k])))  # 读取图片img2
                 newbackground = cv2.cvtColor(newbackground,cv2.COLOR_BGR2RGB)
-
+                newbackground = self._changeLight(newbackground)
+                
                 [x,y,z]=np.shape(Together)
                 
                 newbackground = cv2.resize(newbackground,(640,480))  # 为图片重新指定尺寸
@@ -108,12 +117,13 @@ class DataAugmentation():
                 
                 plt.imshow(imgnew1Together)
                 
-                cv2.imwrite( 'output_data/' + "/{}.jpg".format(",".join(self.json_name[j])),imgnew1Together)
-
+                #cv2.imwrite( 'output_data/' + "/{}.jpg".format(",".join(self.json_name[j])),imgnew1Together)
+                cv2.imwrite( 'output_data/' + "/{}_{}.jpg".format(self.rename, self.cnt + 1),imgnew1Together)
                 ENCODING = 'utf-8'   
-                IMAGE_NAME = '{}.jpg'.format(",".join(self.json_name[j]))    
-                JSON_NAME = '{}.json'.format(",".join(self.json_name[j]))
-                
+                #IMAGE_NAME = '{}.jpg'.format(",".join(self.json_name[j]))    
+                #JSON_NAME = '{}.json'.format(",".join(self.json_name[j]))
+                IMAGE_NAME = '{}_{}.jpg'.format(self.rename, self.cnt + 1)    
+                JSON_NAME = '{}_{}.json'.format(self.rename, self.cnt + 1)
                 
                 with open('output_data/'+ IMAGE_NAME, 'rb') as jpg_file:
                     byte_content = jpg_file.read()
@@ -132,9 +142,10 @@ class DataAugmentation():
                 
                 with open('output_data/'+ JSON_NAME, 'w') as json_file:
                     json_file.write(jsondata)    
-                print('Generating dataset : {}.jpg'.format(",".join(self.json_name[j])) )
-                print('Generating dataset : {}.json'.format(",".join(self.json_name[j])) )
+                print('Generating dataset : {}_{}.jpg'.format(self.rename, self.cnt + 1))
+                print('Generating dataset : {}_{}.json'.format(self.rename, self.cnt + 1) )
 
+                self.cnt+=1
 
 if __name__ == '__main__':
     data = DataAugmentation()

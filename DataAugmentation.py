@@ -155,12 +155,12 @@ class DataAugmentForObjectDetection():
                 if random.random() > self.change_light_rate:  
                     change_num += 1
                     img = self._changeLight(img)
-
+            '''
             if self.is_addNoise:
                 if random.random() < self.add_noise_rate:  
                     change_num += 1
                     img = self._addNoise(img)
-            
+            '''
             if self.is_addrotate:
                 if random.random() < self.add_rotate:
                     change_num += 1
@@ -173,12 +173,12 @@ class DataAugmentForObjectDetection():
                     change_num += 1
                     img = self._addRandPoint(img)
             '''
-            '''
+            
             if self.is_shift_pic_bboxes:
                 if random.random() < self.shift_rate:  
                     change_num += 1
                     img, dic_info = self._shift_pic_bboxes(img, dic_info)
-            '''        
+                    
             if self.is_filp_pic_bboxes or 1:
                 if random.random() < self.flip_rate: 
                     change_num += 1
@@ -214,7 +214,7 @@ class ToolHelper():
 
 if __name__ == '__main__':
 
-    need_aug_num = 4  #需要擴增的次數
+    need_aug_num = 10  #需要擴增的次數
 
     toolhelper = ToolHelper()  
 
@@ -250,6 +250,7 @@ if __name__ == '__main__':
 
                 while cnt < need_aug_num:  
                     auged_img, json_info = dataAug.dataAugment(deepcopy(img), deepcopy(json_dic))
+                
                     img_name = '{}_{}{}'.format(_file_prefix, cnt + 1, _file_suffix)  
                     img_save_path = os.path.join(save_img_json_path, img_name)
                     toolhelper.save_img(img_save_path, auged_img)  
@@ -259,5 +260,5 @@ if __name__ == '__main__':
                     json_info['imageData'] = base64_data
                     toolhelper.save_json('{}_{}.json'.format(_file_prefix, cnt + 1),
                                          save_img_json_path, json_info)  
-                    print(img_name)
+                    #print(img_name)
                     cnt += 1  
