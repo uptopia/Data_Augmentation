@@ -23,12 +23,12 @@ class DataAugmentation():
         self.rename = 'obj_data'
         self.obj_number = 1000
         self.cnt = 0
-        self.DIR = '/home/chien/Data_Augmentation/background'
-        self.PNG = '/home/chien/Data_Augmentation/png'
-        self.Data = '/home/chien/Data_Augmentation/Extend_data'
+        self.DIR = '../Data_Augmentation/background'
+        self.PNG = '../Data_Augmentation/png'
+        self.Data = '../Data_Augmentation/Extend_data'
 
-        self.datanames1 = os.listdir('/home/chien/Data_Augmentation/Extend_data')  
-        self.datanames2 = os.listdir('/home/chien/Data_Augmentation/background')
+        self.datanames1 = os.listdir('../Data_Augmentation/Extend_data')  
+        self.datanames2 = os.listdir('../Data_Augmentation/background')
         
         self.json_data = np.zeros([self.obj_number,1]).astype(np.str)
         self.background_data = np.zeros([self.obj_number,1]).astype(np.str)
@@ -39,19 +39,21 @@ class DataAugmentation():
         j = 0
         m = 0
         for dataname in self.datanames1:
-            if os.path.splitext(dataname)[1] == '.json':#目录下包含.json的文件
+            if os.path.splitext(dataname)[1] == '.json':#original_data目录下包含.json的文件
                 self.json_data[i]=dataname
                 self.json_name[i], suffix = os.path.splitext(",".join(self.json_data[i]))
                 i+=1
               
         for dataname in self.datanames2:
-            if os.path.splitext(dataname)[1] == '.jpg':#目录下包含.jpg的文件
+            if os.path.splitext(dataname)[1] == '.jpg':#background目录下包含.jpg的文件
                 self.background_data[j]=dataname
                 j+=1
+
         for dataname in self.datanames1:
-            if os.path.splitext(dataname)[1] == '.jpg':#目录下包含.jpg的文件
+            if os.path.splitext(dataname)[1] == '.png':#original_data目录下包含.jpg的文件
                 self.oldbackground_data[m]=dataname
                 m+=1
+                
     def _changeLight(self, img):
         alpha = random.uniform(0.35, 1)
         blank = np.zeros(img.shape, img.dtype)

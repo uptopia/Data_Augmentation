@@ -37,6 +37,11 @@ Data_Augmentation
         └── sandwich1.json
 ```
 
+```
+$cd ~
+$git clone https://github.com/uptopia/Data_Augmentation.git
+```
+
 1. mkdir file (/background, /Extend_data, /original_data, /output_data, /png)
 
 2. put your origin data to the /original_data folder. (include .jpg and .json)
