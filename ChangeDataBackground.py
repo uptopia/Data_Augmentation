@@ -28,7 +28,7 @@ class DataAugmentation():
         self.cnt = 0
         
         # INPUT Data Directory
-        self.InputDIR = './Extend_data/'
+        self.InputDIR = './original_data/' #'./Extend_data/'
         self.BackgroundDIR = './background/'
         
         # OUTPUT Data Directory
@@ -47,7 +47,7 @@ class DataAugmentation():
         self.json_data = np.zeros([self.obj_number,1]).astype(np.str)
         self.json_name=np.zeros([self.obj_number,1]).astype(np.str)
         self.oldbackground_data = np.zeros([self.obj_number,1]).astype(np.str)        
-        self.background_data = np.zeros([self.obj_number,1]).astype(np.str)        
+        self.newbackground_data = np.zeros([self.obj_number,1]).astype(np.str)        
         self.output_data = np.zeros([self.obj_number,1]).astype(np.str)        
         
         i = 0
@@ -62,27 +62,15 @@ class DataAugmentation():
                 i+=1
               
         for dataname in self.datanames1:
-            if os.path.splitext(dataname)[1] == '.jpg': #original_data目录下包含.png/.jpg的文件
+            if os.path.splitext(dataname)[1] == '.png': #original_data目录下包含.png/.jpg的文件
                 self.oldbackground_data[m] = dataname
                 m+=1
 
         for dataname in self.datanames2:
             if os.path.splitext(dataname)[1] == '.jpg': #background目录下包含.jpg的文件
-                self.background_data[j] = dataname
+                self.newbackground_data[j] = dataname
                 j+=1
-
-        print(self.json_data)
-        print("==============")
-        print(self.json_name)
-        print("==============")
-        print(suffix)
-        print("==============")
-        print(self.oldbackground_data)
-        print("==============")
-        print(self.background_data)
-        print("==============")
-
-                
+               
     def _changeLight(self, img):
         alpha = random.uniform(0.35, 1)
         blank = np.zeros(img.shape, img.dtype)
@@ -90,72 +78,84 @@ class DataAugmentation():
 
     def generate_data(self):
         for k in range(len([name for name in os.listdir(self.BackgroundDIR) if os.path.isfile(os.path.join(self.BackgroundDIR, name))])):
+
+            newbackground = cv2.imread(self.BackgroundDIR + '/{}'.format(",".join(self.newbackground_data[k])))  # 读取图片img2
+            newbackground = cv2.resize(newbackground, (self.imgWidth, self.imgHeight))  # 为图片重新指定尺寸
+            newbackground = cv2.cvtColor(newbackground,cv2.COLOR_BGR2RGB)
+
             for j in range(int(len(([name for name in os.listdir(self.InputDIR) if os.path.isfile(os.path.join(self.InputDIR, name))]))/2)): 
-                json_file= self.InputDIR +'/{}.json'.format(",".join(self.json_name[j]))
+                #===================#
+                # Decode .json file
+                #===================#
+                json_file = self.InputDIR +'/{}.json'.format(",".join(self.json_name[j]))
                 data = json.load(open(json_file))
                 img = utils.img_b64_to_arr(data['imageData'])
                 label_name_to_value = {'_background_': 0}
                 for shape in data['shapes']:
-                    label_name = shape['label']
+                    label_name = shape['label']                    
                     if label_name in label_name_to_value:
-                        label_value = label_name_to_value[label_name]
+                        label_value = label_name_to_value[label_name]                        
                     else:
                         label_value = len(label_name_to_value)
-                        label_name_to_value[label_name] = label_value
+                        label_name_to_value[label_name] = label_value                        
                         
                 lbl, lbl_names = utils.shapes_to_label(img.shape, data['shapes'], label_name_to_value)
-                
-                mask=[]
-                class_id=[]
-                for i in range(1,len(label_name_to_value)):
+
+                mask = []
+                class_id = []
+                for i in range(1, len(label_name_to_value)):                    
                     mask.append((lbl==i).astype(np.uint8)) 
-                    class_id.append(i) 
-                mask=np.asarray(mask,np.uint8)
-                mask=np.transpose(np.asarray(mask,np.uint8),[1,2,0])
+                    class_id.append(i)
+                mask = np.asarray(mask,np.uint8)
+                mask = np.transpose(np.asarray(mask,np.uint8),[1,2,0])
                 
-                all_mask=0
-                
-                for i in range(0,len(class_id)):
+                all_mask = 0                
+                for i in range(0, len(class_id)):
                     retval, im_at_fixed = cv2.threshold(mask[:,:,i], 0, 255, cv2.THRESH_BINARY) 
                     all_mask = all_mask + im_at_fixed
                 
-                cv2.imwrite( self.PNGDIR + "/{}.png".format(",".join(self.json_name[j])), all_mask) 
-                label_together = cv2.imread( self.PNGDIR + '/{}.png'.format(",".join(self.json_name[j])))
-                label_together = cv2.resize(label_together, (self.imgWidth, self.imgHeight))
+                cv2.imwrite(self.PNGDIR + "/{}.png".format(",".join(self.json_name[j])), all_mask) 
 
-                oldbackground = cv2.imread(self.InputDIR +'/{}.jpg'.format(",".join(self.json_name[j]))) #oldbackground_data-->json_name
+                #=====================#
+                # Label, InverseLabel    
+                #=====================#
+                label = cv2.imread( self.PNGDIR + '/{}.png'.format(",".join(self.json_name[j])))
+                label = cv2.resize(label, (self.imgWidth, self.imgHeight))
+
+                inv_label = 255 - label
+
+                #================#
+                # Extract Object    
+                #================#
+                oldbackground = cv2.imread(self.InputDIR +'/{}.png'.format(",".join(self.json_name[j]))) #oldbackground_data-->json_name
                 oldbackground = cv2.resize(oldbackground, (self.imgWidth, self.imgHeight))
-                oldbackground = cv2.cvtColor(oldbackground,cv2.COLOR_BGR2RGB)
-                
-                Together = cv2.bitwise_and(label_together,oldbackground) #两个图片一个是彩色，另一个是彩色，不能做位与运算，需要将第一个图灰度话后再操作
-                
-                newbackground = cv2.imread(self.BackgroundDIR + '/{}'.format(",".join(self.background_data[k])))  # 读取图片img2
-                newbackground = cv2.cvtColor(newbackground,cv2.COLOR_BGR2RGB)
-                newbackground = self._changeLight(newbackground)
-                
-                [x,y,z]=np.shape(Together)
-                
-                newbackground = cv2.resize(newbackground, (self.imgWidth, self.imgHeight))  # 为图片重新指定尺寸
-                
-                imgTogether = Together + newbackground
+                oldbackground = cv2.cvtColor(oldbackground, cv2.COLOR_BGR2RGB)        
 
-                Inverse_label_together = 255 - label_together
-                
-                Remove_label_together = cv2.bitwise_and(Inverse_label_together,newbackground)
-                
-                imgnew1Together = Together + Remove_label_together
-                imgnew1Together = cv2.cvtColor(imgnew1Together,cv2.COLOR_BGR2RGB)
-                
-                
-                plt.imshow(imgnew1Together)
-                
-                #cv2.imwrite(self.OutputDIR + "/{}.jpg".format(",".join(self.json_name[j])),imgnew1Together)
-                cv2.imwrite(self.OutputDIR + "/{}_{}.jpg".format(self.rename, self.cnt + 1),imgnew1Together)
-                ENCODING = 'utf-8'   
-                #IMAGE_NAME = '{}.jpg'.format(",".join(self.json_name[j]))    
-                #JSON_NAME = '{}.json'.format(",".join(self.json_name[j]))
-                IMAGE_NAME = '{}_{}.jpg'.format(self.rename, self.cnt + 1)    
-                JSON_NAME = '{}_{}.json'.format(self.rename, self.cnt + 1)
+                imgObject = cv2.bitwise_and(label, oldbackground) #两个图片一个是彩色，另一个是彩色，不能做位与运算，需要将第一个图灰度话后再操作
+        
+                #=======================#
+                # Extract NewBackground    
+                #=======================#
+                newbackground = self._changeLight(newbackground)
+
+                imgBackground = cv2.bitwise_and(inv_label, newbackground)
+        
+                #===================================#
+                # NewImage = imgObject + NewBackground
+                #===================================#
+                imgTogether = imgObject + imgBackground
+                imgTogether = cv2.cvtColor(imgTogether, cv2.COLOR_BGR2RGB)
+
+                #=======================#
+                # Save .JPG .JSON files
+                #=======================#
+                # save image                                
+                cv2.imwrite(self.OutputDIR + "/{}_{}.jpg".format(self.rename, self.cnt + 1),imgTogether) #cv2.imwrite(self.OutputDIR + "/{}.jpg".format(",".join(self.json_name[j])),imgTogether)
+
+                # save json
+                ENCODING = 'utf-8'
+                IMAGE_NAME = '{}_{}.jpg'.format(self.rename, self.cnt + 1) #IMAGE_NAME = '{}.jpg'.format(",".join(self.json_name[j])) 
+                JSON_NAME = '{}_{}.json'.format(self.rename, self.cnt + 1) #JSON_NAME = '{}.json'.format(",".join(self.json_name[j]))
                 
                 with open(self.OutputDIR + IMAGE_NAME, 'rb') as jpg_file:
                     byte_content = jpg_file.read()
@@ -166,14 +166,15 @@ class DataAugmentation():
                 raw_data["version"] = "4.5.6"
                 raw_data["shapes"] = data['shapes']
                 raw_data["imagePath"] = IMAGE_NAME
-                raw_data["imageData"] = base64_string 
                 raw_data["imageHeight"] = self.imgHeight
                 raw_data["imageWidth"] = self.imgWidth
+                raw_data["imageData"] = base64_string
                 
-                jsondata = dumps(raw_data, indent=2)
+                jsondata = dumps(raw_data, indent = 2)
                 
                 with open(self.OutputDIR + JSON_NAME, 'w') as json_file:
-                    json_file.write(jsondata)    
+                    json_file.write(jsondata)
+
                 print('Generating dataset : {}_{}.jpg'.format(self.rename, self.cnt + 1))
                 print('Generating dataset : {}_{}.json'.format(self.rename, self.cnt + 1) )
 
