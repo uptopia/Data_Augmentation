@@ -27,7 +27,7 @@ class MergeMultiObjects():
         self.InputDIR = '/home/upup/Documents/objects_input/'           
         self.OutputDIR = '/home/upup/Documents/objects_output/'
 
-        self.merge_type_num = 5
+        self.merge_type_num = 15
 
         #=======================#
         # Read object filenames  
@@ -64,12 +64,12 @@ class MergeMultiObjects():
     def select_obj_image(self):
         print('select {} types of objects'.format(self.merge_type_num))
         # random.seed()
-        # #可重複
-        # rand_x = [random.randint(0, self.tot_obj_types - 1) for _ in range(self.merge_type_num)]
+        #可重複
+        idx_type = [random.randint(0, self.tot_obj_types - 1) for _ in range(self.merge_type_num)]
         
         self.selected_img = []
-        #不可重複
-        idx_type = random.sample(range(0, self.tot_obj_types - 1), self.merge_type_num)
+        # #不可重複
+        # idx_type = random.sample(range(0, self.tot_obj_types - 1), self.merge_type_num)
         
         for cnt in range(self.merge_type_num):            
             folder = self.InputDIR + self.obj_type_list[idx_type[cnt]]            
@@ -84,12 +84,15 @@ class MergeMultiObjects():
 
     def extract_obj(self):
         # read image
+        obj_mask_color = []
         obj_mask = []
+
         cnt=0    
         for n in range(len(self.selected_img)):
             path1 = self.selected_img[n] 
             print(path1)
-            img = cv2.imread(path1 + '.png')
+            img_cv = cv2.imread(path1 + '.png')
+   
             
             #read json
             toolhelper = ToolHelper()  
@@ -132,25 +135,52 @@ class MergeMultiObjects():
                 print('mask{}.png'.format(cnt))
                 cv2.imwrite('mask{}.png'.format(cnt), im_at_fixed)
                 cnt=cnt+1
-                cv2.imshow('im_at_fixed', im_at_fixed)
-                cv2.waitKey(0)
 
-                all_mask_g = cv2.cvtColor(im_at_fixed, cv2.COLOR_GRAY2RGB)
-                imgObject = cv2.bitwise_and(all_mask_g, img) #两个图片一个是彩色，另一个是彩色，不能做位与运算，需要将第一个图灰度话后再操作
-                obj_mask.append(imgObject) 
+                all_mask_g = cv2.cvtColor(im_at_fixed, cv2.COLOR_GRAY2RGB) #im_at_fixed 單通道遮罩; all_mask_g 三通道遮罩
+                print(im_at_fixed.shape)
+                print(all_mask_g.shape)
+                imgObject = cv2.bitwise_and(all_mask_g, img_cv) #两个图片一个是彩色，另一个是彩色，不能做位与运算，需要将第一个图灰度话后再操作
+                # cv2.imshow('all_mask_g', all_mask_g)
+                # cv2.waitKey(0)
+                obj_mask.append(all_mask_g)
+                obj_mask_color.append(imgObject) 
 
         height, width, _ = np.shape(imgObject)
         fin_img = np.ones((height, width,3), np.uint8)
-        for k in range(len(obj_mask)-1):
+        for k in range(len(obj_mask_color)-1):
 
             if k == 0:
-                fin_img = cv2.bitwise_xor(obj_mask[k], obj_mask[k+1])
+                # fin_img_color = cv2.bitwise_xor(obj_mask_color[k], obj_mask_color[k+1])
+
+                mask_no_overlap = cv2.bitwise_xor(obj_mask[k], obj_mask[k+1])      #[未重疊]部份的遮罩
+                obj1_no_overlap = cv2.bitwise_and(mask_no_overlap, obj_mask_color[k])    #第一物件[未重疊]部份
+                obj2_no_overlap = cv2.bitwise_and(mask_no_overlap, obj_mask_color[k+1])  #第二物件[未重疊]部份
+
+                mask_overlap = cv2.bitwise_and(obj_mask[k], obj_mask[k+1])      #[重疊]部份遮罩
+                obj2_overlap = cv2.bitwise_and(mask_overlap, obj_mask_color[k+1])     #第二物件[重疊]部份
+                
+                fin = cv2.bitwise_or(obj1_no_overlap, obj2_no_overlap)                  #第一物件[未重疊]+第二物件[未重疊]+第二物件[重疊]
+                fin = cv2.bitwise_or(fin, obj2_overlap)
+                cv2.imshow('fin', fin)
+                cv2.waitKey(0)
             else:
-                fin_img = cv2.bitwise_xor(fin_img, obj_mask[k+1])
-            
-            cv2.imshow('111fin_img', fin_img)
-            cv2.waitKey(0)
-        cv2.imwrite('fin_img.png', fin_img)
+                # fin_img_color = cv2.bitwise_xor(obj_mask_color[k], obj_mask_color[k+1])
+
+                mask_no_overlap = cv2.bitwise_xor(fin, obj_mask[k+1])              #[未重疊]部份的遮罩
+                obj1_no_overlap = cv2.bitwise_and(mask_no_overlap, fin)                  #新圖[未重疊]部份
+                obj2_no_overlap = cv2.bitwise_and(mask_no_overlap, obj_mask_color[k+1])  #第k+1物件[未重疊]部份
+
+                mask_overlap = cv2.bitwise_and(fin, obj_mask[k+1])              #[重疊]部份遮罩
+                obj2_overlap = cv2.bitwise_and(mask_overlap, obj_mask_color[k+1])     #第k+1物件[重疊]部份
+                
+                fin = cv2.bitwise_or(obj1_no_overlap, obj2_no_overlap)                  #新圖[未重疊]+第k+1物件[未重疊]+第k+1物件[重疊]
+                fin = cv2.bitwise_or(fin, obj2_overlap)
+                cv2.imshow('fin', fin)
+                cv2.waitKey(0)
+
+        # cv2.imshow('111fin_imgC', fin_imgC)
+        # cv2.waitKey(0)
+        # cv2.imwrite('fin_img.png', fin_img)
 
 
 # xml解析工具
