@@ -62,12 +62,13 @@ class DataAugmentForObjectDetection():
 
     # 旋轉
     def _addrotate(self, img, angle, json_info):
+        #image
         h, w, _ = img.shape
         center = (w/2, h/2)
         M = cv2.getRotationMatrix2D(center, angle, 1.0)
         rotate_img = cv2.warpAffine(img, M, (w, h))
 
-
+        #json
         shapes = json_info['shapes']
         for shape in shapes:
             for p in shape['points']:
@@ -223,8 +224,8 @@ if __name__ == '__main__':
     dataAug = DataAugmentForObjectDetection()
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--source_img_json_path', type=str, default='../Data_Augmentation/output_data')
-    parser.add_argument('--save_img_json_path', type=str, default='../Data_Augmentation/Extend_data')
+    parser.add_argument('--source_img_json_path', type = str, default = '../Data_Augmentation/output_data') #input
+    parser.add_argument('--save_img_json_path', type = str, default = '../Data_Augmentation/Extend_data')   #output
     args = parser.parse_args()
     source_img_json_path = args.source_img_json_path
     save_img_json_path = args.save_img_json_path  
@@ -234,8 +235,11 @@ if __name__ == '__main__':
         os.mkdir(save_img_json_path)
 
     for parent, _, files in os.walk(source_img_json_path):
+        print('parent: {}, files: {}'.format(parent, files))
         files.sort()  # 排序一下
+        print('files sorted', files)
         for file in files:
+            # load image, json files
             if file.endswith('jpg') or file.endswith('png'):
                 cnt = 0
                 pic_path = os.path.join(parent, file)
@@ -248,17 +252,20 @@ if __name__ == '__main__':
                     _file_suffix = file[dot_index:]  # 文件名的後缀
                 img = cv2.imread(pic_path)
 
-                while cnt < need_aug_num:  
+                while cnt < need_aug_num:
+                    # data augmentation
                     auged_img, json_info = dataAug.dataAugment(deepcopy(img), deepcopy(json_dic))
                 
+                    # save image
                     img_name = '{}_{}{}'.format(_file_prefix, cnt + 1, _file_suffix)  
                     img_save_path = os.path.join(save_img_json_path, img_name)
                     toolhelper.save_img(img_save_path, auged_img)  
-
+                    
+                    # save json
                     json_info['imagePath'] = img_name
                     base64_data = toolhelper.img2str(img_save_path)
                     json_info['imageData'] = base64_data
-                    toolhelper.save_json('{}_{}.json'.format(_file_prefix, cnt + 1),
-                                         save_img_json_path, json_info)  
+                    toolhelper.save_json('{}_{}.json'.format(_file_prefix, cnt + 1), save_img_json_path, json_info)
+
                     #print(img_name)
-                    cnt += 1  
+                    cnt += 1
