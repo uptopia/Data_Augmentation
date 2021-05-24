@@ -400,6 +400,16 @@ class ToolHelper():
     def save_json(self, file_name, save_folder, dic_info):
         with open(os.path.join(save_folder, file_name), 'w') as f:
             json.dump(dic_info, f, indent=2)
+    
+    def concat_shapes(self, dic_info_list):
+        total_shapes = []
+        for n in range(len(dic_info_list)):
+            json_info = dic_info_list[n]
+            shapes = json_info['shapes']
+            for shape in shapes:
+                total_shapes.append(shape)
+        return total_shapes
+
 
 if __name__ == '__main__':
     data = MergeMultiObjects()
@@ -425,15 +435,28 @@ if __name__ == '__main__':
     cv2.imshow('after data_aug', merge_img_data_aug)
     cv2.waitKey(0)
 
-    # toolhelper = ToolHelper()
-    # # save image
-    # img_name = '{}_{}{}'.format(_file_prefix, cnt + 1, _file_suffix)  
-    # img_save_path = os.path.join(save_img_json_path, img_name)
-    # toolhelper.save_img(img_save_path, merge_img_data_aug)  
+    toolhelper = ToolHelper()
+    # save image
+    _file_prefix = 'test1'
+    cnt = 1
+    _file_suffix = '.jpg'
+    save_img_json_path = '../Data_Augmentation/'
+    img_name = '{}_{}{}'.format(_file_prefix, cnt + 1, _file_suffix)  
+    img_save_path = os.path.join(save_img_json_path, img_name)
+    toolhelper.save_img(img_save_path, merge_img_data_aug)  
     
-    # # save json
-    # json_info['imagePath'] = img_name
-    # base64_data = toolhelper.img2str(img_save_path)
-    # json_info['imageData'] = base64_data
-    # toolhelper.save_json('{}_{}.json'.format(_file_prefix, cnt + 1), save_img_json_path, json_info)
+    # save json
+    ENCODING = 'utf-8'
+    raw_data = {}
+    raw_data["version"] = "4.5.6"
+    merge_shapes = toolhelper.concat_shapes(json_info_list)  
+    raw_data["shapes"] = merge_shapes#data['shapes']
+    raw_data["imagePath"] = img_name
+    height, width, _ = np.shape(merge_img_data_aug)
+    raw_data["imageHeight"] = height
+    raw_data["imageWidth"] = width
+    base64_data = toolhelper.img2str(img_save_path)
+    raw_data["imageData"] = base64_data    
+
+    toolhelper.save_json('{}_{}.json'.format(_file_prefix, cnt + 1), save_img_json_path, raw_data)
 
