@@ -14,12 +14,7 @@ import DataAugmentation # DataAugmentation.py
 
 class MergeMultiObjects():
     """Merge [multiple objects] into [1 image].
-
     [Objects] has [.jpg/.png] + [.json] file    
-
-    # Attributes:
-    #     likes_spam: A boolean indicating if we like SPAM or not.
-    #     eggs: An integer count of the eggs we have laid.
     """
     
     def __init__(self):      
@@ -122,7 +117,7 @@ class MergeMultiObjects():
             #append filenames
             path = self.InputDIR + self.obj_type_list[obj_type_idx] + '/' + filename            
             self.selected_img_list.append(path)
-            print(path)        
+            # print(path)
 
     def extract_obj(self):    
         """Extract obj mask from image and json file"""
@@ -233,6 +228,7 @@ if __name__ == '__main__':
     input_folder_object = './input/single_object/'
     input_folder_background = './input/background/'
     output_folder = './output/'
+    num_imgs_to_generate = 10  #需要生成的圖片數
 
     #===================#
     # MergeMultiObjects
@@ -241,80 +237,84 @@ if __name__ == '__main__':
     mergeObj.InputDIR = input_folder_object
     mergeObj.OutputDIR = input_folder_background
     mergeObj.load_obj_filenames()
-    mergeObj.select_obj_to_merge()
-    
-    #[擴增前]的單通道遮罩、三通道遮罩、json資料
-    obj_mask_ori = []
-    obj_mask_color_ori = []
-    json_info_list_ori = []
-    obj_mask_ori, obj_mask_color_ori, json_info_list_ori = mergeObj.extract_obj()
-    
-    #===================#
-    # Data Augmentation
-    #===================#
-    #[擴增後]的單通道遮罩、三通道遮罩、json資料
-    obj_mask_dataAug = []
-    obj_mask_color_dataAug = []
-    json_info_list_dataAug = []
 
-    dataAug = DataAugmentation.DataAugmentForObjectDetection()
-    for cnt in range(len(obj_mask_ori)):
-        img_ori = obj_mask_color_ori[cnt]
-        json_info_ori = json_info_list_ori[cnt]
+    #需要生成num_imgs_to_generate張圖片
+    for num in range(num_imgs_to_generate):
+        #選擇待合併的圖片
+        mergeObj.select_obj_to_merge()
         
-        #Apply data augmentation to object
-        img_dataAug, json_info_dataAug = dataAug.dataAugment(deepcopy(img_ori), deepcopy(json_info_ori))
+        #[擴增前]的單通道遮罩、三通道遮罩、json資料
+        obj_mask_ori = []
+        obj_mask_color_ori = []
+        json_info_list_ori = []
+        obj_mask_ori, obj_mask_color_ori, json_info_list_ori = mergeObj.extract_obj()
+        
+        #===================#
+        # Data Augmentation
+        #===================#
+        #[擴增後]的單通道遮罩、三通道遮罩、json資料
+        obj_mask_dataAug = []
+        obj_mask_color_dataAug = []
+        json_info_list_dataAug = []
 
-        #Append image and json after data augmentation
-        obj_mask_color_dataAug.append(img_dataAug)
-        json_info_list_dataAug.append(json_info_dataAug)        
+        dataAug = DataAugmentation.DataAugmentForObjectDetection()
+        for cnt in range(len(obj_mask_ori)):
+            img_ori = obj_mask_color_ori[cnt]
+            json_info_ori = json_info_list_ori[cnt]
+            
+            #Apply data augmentation to object
+            img_dataAug, json_info_dataAug = dataAug.dataAugment(deepcopy(img_ori), deepcopy(json_info_ori))
 
-    obj_mask_dataAug = mergeObj.generate_single_channel_mask(obj_mask_color_dataAug)
+            #Append image and json after data augmentation
+            obj_mask_color_dataAug.append(img_dataAug)
+            json_info_list_dataAug.append(json_info_dataAug)        
 
-    #===================#
-    # MergeMultiObjects
-    #===================#
-    #Merge multi. obj. BEFORE data aug.
-    merge_img = mergeObj.merge_obj(obj_mask_ori, obj_mask_color_ori)
-    
-    cv2.imwrite('merge_BEFORE_dataAug.jpg', merge_img)
-    cv2.imshow('Merge multi. obj. BEFORE data aug.', merge_img)
-    cv2.waitKey(0)
-    
-    #Merge multi. obj. AFTER data aug.
-    merge_img_dataAug = mergeObj.merge_obj(obj_mask_dataAug, obj_mask_color_dataAug)
-    
-    cv2.imwrite('merge_AFTER_dataAug.jpg', merge_img_dataAug)
-    cv2.imshow('Merge multi. obj. AFTER data aug.', merge_img_dataAug)
-    cv2.waitKey(0)
-    
+        obj_mask_dataAug = mergeObj.generate_single_channel_mask(obj_mask_color_dataAug)
 
-    # #==========================#
-    # # Save Image and JSON file
-    # #==========================#
-    # toolhelper = DataAugmentation.ToolHelper()
+        #===================#
+        # MergeMultiObjects
+        #===================#
+        #Merge multi. obj. BEFORE data aug.
+        merge_img = mergeObj.merge_obj(obj_mask_ori, obj_mask_color_ori)
+        
+        cv2.imwrite('merge_BEFORE_dataAug.jpg', merge_img)
+        cv2.imshow('Merge multi. obj. BEFORE data aug.', merge_img)
+        cv2.waitKey(0)
+        
+        #Merge multi. obj. AFTER data aug.
+        merge_img_dataAug = mergeObj.merge_obj(obj_mask_dataAug, obj_mask_color_dataAug)
+        
+        cv2.imwrite('merge_AFTER_dataAug.jpg', merge_img_dataAug)
+        cv2.imshow('Merge multi. obj. AFTER data aug.', merge_img_dataAug)
+        cv2.waitKey(0)
+        
+        #==========================#
+        # Save Image and JSON file
+        #==========================#
+        print('======================')
+        print(' Save Image and JSON')
+        print('======================')
+        output_filename = 'merge_img_dataAug_' + str(num)
 
-    # # save image
-    # _file_prefix = 'test1'
-    # cnt = 1
-    # _file_suffix = '.jpg'
-    # save_img_json_path = '../Data_Augmentation/'
-    # img_name = '{}_{}{}'.format(_file_prefix, cnt + 1, _file_suffix)  
-    # img_save_path = os.path.join(save_img_json_path, img_name)
-    # toolhelper.save_img(img_save_path, merge_img_dataAug)  
-    
-    # # save json
-    # ENCODING = 'utf-8'
-    # raw_data = {}
-    # raw_data["version"] = "4.5.6"
-    # merge_shapes = toolhelper.concat_shapes(json_info_list_dataAug)  
-    # raw_data["shapes"] = merge_shapes#data['shapes']
-    # raw_data["imagePath"] = img_name
-    # height, width, _ = np.shape(merge_img_dataAug)
-    # raw_data["imageHeight"] = height
-    # raw_data["imageWidth"] = width
-    # base64_data = toolhelper.img2str(img_save_path)
-    # raw_data["imageData"] = base64_data    
+        # save image
+        output_filename_img = output_folder + output_filename + '.jpg'
+        cv2.imwrite(output_filename_img, merge_img_dataAug)
+        print("SAVE image: {}".format(output_filename_img))
 
-    # toolhelper.save_json('{}_{}.json'.format(_file_prefix, cnt + 1), save_img_json_path, raw_data)
+        # save json
+        toolhelper = DataAugmentation.ToolHelper()
+        ENCODING = 'utf-8'
+        raw_data = {}
+        raw_data["version"] = "4.5.6"
+        merge_shapes = toolhelper.concat_shapes(json_info_list_dataAug)  
+        raw_data["shapes"] = merge_shapes
+        raw_data["imagePath"] = output_filename_img
+        height, width, _ = np.shape(merge_img_dataAug)
+        raw_data["imageHeight"] = height
+        raw_data["imageWidth"] = width
+        base64_data = toolhelper.img2str(output_filename_img)
+        raw_data["imageData"] = base64_data    
 
+        toolhelper.save_json(output_filename, output_folder, raw_data)
+        output_filename_json = output_folder + output_filename + '.json'
+        print("SAVE json: {}".format(output_filename_json))
