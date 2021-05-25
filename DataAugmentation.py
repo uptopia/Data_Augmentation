@@ -212,6 +212,15 @@ class ToolHelper():
         with open(os.path.join(save_folder, file_name), 'w') as f:
             json.dump(dic_info, f, indent=2)
 
+    def concat_shapes(self, dic_info_list):
+        total_shapes = []
+        for n in range(len(dic_info_list)):
+            json_info = dic_info_list[n]
+            shapes = json_info['shapes']
+            for shape in shapes:
+                total_shapes.append(shape)
+        return total_shapes
+
 
 if __name__ == '__main__':
 
