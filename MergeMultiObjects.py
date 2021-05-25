@@ -25,8 +25,8 @@ class MergeMultiObjects():
         self.OutputDIR = './output/'
 
         #Merge Multiple Object Options
-        self.merge_obj_num = 16            #[Number of objects] to merge in 1 image
-        self.allow_same_obj_type = True    #Allow [same obj type] in 1 image
+        self.merge_obj_num = 6              #[Number of objects] to merge in 1 image
+        self.allow_same_obj_type = False    #Allow [same obj type] in 1 image
         
         #Load obj folder and obj filenames
         self.obj_type_list = []
@@ -74,8 +74,9 @@ class MergeMultiObjects():
             tot_obj_images_num = len(self.obj_name_list_tot[iter_folder])
             print('Object type [{}]: {} images'.format(obj_name, tot_obj_images_num))  
 
-    def select_obj_to_merge(self):
+    def select_obj_to_merge(self):        
         """Randomly select [obj type] and [obj] to merge"""
+        self.selected_img_list = []
 
         print('====================================')
         print(' Merge Multiple Objects Options')
@@ -121,6 +122,9 @@ class MergeMultiObjects():
 
     def extract_obj(self):    
         """Extract obj mask from image and json file"""
+        self.obj_mask_list = []
+        self.obj_mask_color_list = []
+        self.json_info_list = []
 
         obj_mask_list = []
         obj_mask_color_list = []
@@ -191,6 +195,7 @@ class MergeMultiObjects():
 
     def merge_obj(self, obj_mask_list, obj_mask_color_list):     
         """Merge multiple object into 1 image"""
+        self.img_merged = []
 
         height, width, _ = np.shape(obj_mask_color_list[0])
         img_merged = np.ones((height, width,3), np.uint8)
@@ -236,6 +241,8 @@ if __name__ == '__main__':
     mergeObj = MergeMultiObjects()
     mergeObj.InputDIR = input_folder_object
     mergeObj.OutputDIR = input_folder_background
+    mergeObj.merge_obj_num = 6
+    mergeObj.allow_same_obj_type = False
     mergeObj.load_obj_filenames()
 
     #需要生成num_imgs_to_generate張圖片
@@ -277,16 +284,16 @@ if __name__ == '__main__':
         #Merge multi. obj. BEFORE data aug.
         merge_img = mergeObj.merge_obj(obj_mask_ori, obj_mask_color_ori)
         
-        cv2.imwrite('merge_BEFORE_dataAug.jpg', merge_img)
-        cv2.imshow('Merge multi. obj. BEFORE data aug.', merge_img)
-        cv2.waitKey(0)
+        # cv2.imwrite('merge_BEFORE_dataAug.jpg', merge_img)
+        # cv2.imshow('Merge multi. obj. BEFORE data aug.', merge_img)
+        # cv2.waitKey(0)
         
         #Merge multi. obj. AFTER data aug.
         merge_img_dataAug = mergeObj.merge_obj(obj_mask_dataAug, obj_mask_color_dataAug)
         
-        cv2.imwrite('merge_AFTER_dataAug.jpg', merge_img_dataAug)
-        cv2.imshow('Merge multi. obj. AFTER data aug.', merge_img_dataAug)
-        cv2.waitKey(0)
+        # cv2.imwrite('merge_AFTER_dataAug.jpg', merge_img_dataAug)
+        # cv2.imshow('Merge multi. obj. AFTER data aug.', merge_img_dataAug)
+        # cv2.waitKey(0)
         
         #==========================#
         # Save Image and JSON file
@@ -294,7 +301,7 @@ if __name__ == '__main__':
         print('======================')
         print(' Save Image and JSON')
         print('======================')
-        output_filename = 'merge_img_dataAug_' + str(num)
+        output_filename = 'merge_' + str(num)
 
         # save image
         output_filename_img = output_folder + output_filename + '.jpg'
@@ -315,6 +322,6 @@ if __name__ == '__main__':
         base64_data = toolhelper.img2str(output_filename_img)
         raw_data["imageData"] = base64_data    
 
-        toolhelper.save_json(output_filename, output_folder, raw_data)
-        output_filename_json = output_folder + output_filename + '.json'
+        toolhelper.save_json(output_filename + '.json', output_folder, raw_data)
+        output_filename_json = output_folder + output_filename + '.json'       
         print("SAVE json: {}".format(output_filename_json))
