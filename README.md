@@ -1,5 +1,23 @@
 # Data_Augmentation
 
+##物件資料擴增＋合併多個物件＋更換背景：MergeMultiObjects.py
+input/single_object
+input/background
+output/merge_objects
+output/merge_dataAug_objects
+
+===================================================
+##其他使用方法
+###更換背景：單獨使用ChangeDataBackground.py
+input_folder
+output_folder
+
+
+###資料擴增：單獨使用DataAugmentation.py
+input_folder
+output_folder
+
+
 ```
 Data_Augmentation
     ├── background

@@ -1,24 +1,36 @@
-# encoding='UTF-8'
+# -*- coding: UTF-8 -*-
 
-import time
-import random
-import cv2
 import os
+import re
+import math
+import time
+import json
+import random
+import base64
+import argparse
+from copy import deepcopy
+
+import cv2
 import numpy as np
 from skimage.util import random_noise
-import base64
-import json
-import re
-from copy import deepcopy
-import argparse
-import math
 
 
 class DataAugmentForObjectDetection():
+    """Summary of class here.
+
+    Longer class information....
+    Longer class information....
+
+    Attributes:
+        likes_spam: A boolean indicating if we like SPAM or not.
+        eggs: An integer count of the eggs we have laid.
+    """
+
     def __init__(self, change_light_rate=0.5,
-                 add_rotate=0.5, add_noise_rate=0.5, random_point=0.5, flip_rate=0.5, shift_rate=0.5, rand_point_percent=0.03,
+                 add_rotate=0.5, add_noise_rate=0.5, random_point=0.5, flip_rate=0.5, shift_rate=0.5, rand_point_percent=0.03, scale_rate = 0.5,
                  is_addrotate=True, is_addNoise=True, is_changeLight=True, is_random_point=True, is_shift_pic_bboxes=True,
-                 is_filp_pic_bboxes=True):
+                 is_filp_pic_bboxes=True, is_scaled=True):
+        """Inits SampleClass with blah."""
         
         self.rotate_angle = 10
 
@@ -29,6 +41,7 @@ class DataAugmentForObjectDetection():
         self.flip_rate = flip_rate
         self.shift_rate = shift_rate
         self.rand_point_percent = rand_point_percent
+        self.scale_rate = scale_rate
 
         self.is_addrotate = is_addrotate
         self.is_addNoise = is_addNoise
@@ -36,6 +49,7 @@ class DataAugmentForObjectDetection():
         self.is_random_point = is_random_point
         self.is_filp_pic_bboxes = is_filp_pic_bboxes
         self.is_shift_pic_bboxes = is_shift_pic_bboxes
+        self.is_scaled = is_scaled
 
     # 加噪聲
     def _addNoise(self, img):
@@ -76,6 +90,32 @@ class DataAugmentForObjectDetection():
                 p[1] = center[1] - (math.sin(angle*math.pi/180)*(p[0] - center[0]) + math.cos(angle*math.pi/180)*(center[1] - p[1]))
         return rotate_img, json_info
 
+    # 縮放
+    def _addscaling(self, img, json_info):
+        scale = random.uniform(0, 1)
+        if(scale < 0.5):
+            scale = 0.5
+
+        #image
+        h, w, _ = img.shape
+        h_scaled = int(scale * h)
+        w_scaled = int(scale * w)
+
+        img_black = np.zeros((h, w, 3), np.uint8)
+        img_scaled = cv2.resize(img, (w_scaled, h_scaled))
+         
+        for i in range(h_scaled):
+            for j in range(w_scaled):    
+                img_black[i][j] = img_scaled[i][j]
+
+        #json
+        shapes = json_info['shapes']
+        for shape in shapes:
+            for p in shape['points']:
+                p[0] = int(scale * p[0])
+                p[1] = int(scale * p[1])
+        
+        return img_black, json_info
 
     # 平移
     def _shift_pic_bboxes(self, img, json_info):
@@ -152,10 +192,13 @@ class DataAugmentForObjectDetection():
         change_num = 0  # 改变的次数
         while change_num < 1:  # 至少有一種數據增强生效
             
+            '''
             if self.is_changeLight:
                 if random.random() > self.change_light_rate:  
                     change_num += 1
                     img = self._changeLight(img)
+            '''
+            
             '''
             if self.is_addNoise:
                 if random.random() < self.add_noise_rate:  
@@ -174,7 +217,12 @@ class DataAugmentForObjectDetection():
                     change_num += 1
                     img = self._addRandPoint(img)
             '''
-            
+
+            if self.is_scaled:
+                if random.random() < self.scale_rate:
+                    change_num += 1
+                    img, dic_info = self._addscaling(img, dic_info)                
+
             if self.is_shift_pic_bboxes:
                 if random.random() < self.shift_rate:  
                     change_num += 1
@@ -190,14 +238,25 @@ class DataAugmentForObjectDetection():
 
 # xml解析工具
 class ToolHelper():
+    """Summary of class here.
+
+    Longer class information....
+    Longer class information....
+
+    Attributes:
+        likes_spam: A boolean indicating if we like SPAM or not.
+        eggs: An integer count of the eggs we have laid.
+    """
 
     def parse_json(self, path):
+        """Inits SampleClass with blah."""
         with open(path)as f:
             json_data = json.load(f)
         return json_data
 
     # 對圖片進行編碼
     def img2str(self, img_name):
+        """Inits SampleClass with blah."""
         with open(img_name, "rb")as f:
             base64_data = str(base64.b64encode(f.read()))
         match_pattern = re.compile(r'b\'(.*)\'')
@@ -207,12 +266,12 @@ class ToolHelper():
     def save_img(self, save_path, img):
         cv2.imwrite(save_path, img)
 
-
     def save_json(self, file_name, save_folder, dic_info):
         with open(os.path.join(save_folder, file_name), 'w') as f:
             json.dump(dic_info, f, indent=2)
 
     def concat_shapes(self, dic_info_list):
+        """Inits SampleClass with blah."""
         total_shapes = []
         for n in range(len(dic_info_list)):
             json_info = dic_info_list[n]

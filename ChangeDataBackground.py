@@ -1,25 +1,38 @@
-import json
-import matplotlib.pyplot as plt
-import cv2
-import os
-from labelme import utils
-import numpy as np
-from base64 import b64encode
-from json import dumps
+# -*- coding: UTF-8 -*-
 
+import os
+import re
+import math
 import time
 import random
-from skimage.util import random_noise
-import base64
-import json
-import re
-from copy import deepcopy
 import argparse
-import math
+from copy import deepcopy
+import json
+from json import dumps
+import base64
+from base64 import b64encode
+from copy import deepcopy
+
+import cv2
+import numpy as np
+from labelme import utils
+import matplotlib.pyplot as plt
+from skimage.util import random_noise
 
 
 class DataAugmentation():
+    """Summary of class here.
+
+    Longer class information....
+    Longer class information....
+
+    Attributes:
+        likes_spam: A boolean indicating if we like SPAM or not.
+        eggs: An integer count of the eggs we have laid.
+    """
+
     def __init__(self):
+        """Inits SampleClass with blah."""
         #=====================#
         # Parameters Settings    
         #=====================#
@@ -28,15 +41,15 @@ class DataAugmentation():
         self.cnt = 0
         
         # INPUT Data Directory
-        self.InputDIR = './original_data/' #'./Extend_data/'
-        self.BackgroundDIR = './background/'
+        self.InputDIR = './output'#'./original_data/' #'./Extend_data/'
+        self.BackgroundDIR = './input/background/'
         
         # OUTPUT Data Directory
-        self.PNGDIR = './png/'
+        self.PNGDIR = './png'#/'
         self.OutputDIR = './output_data/'
 
-        self.imgWidth = 640
-        self.imgHeight = 480
+        self.imgWidth = 1280#640
+        self.imgHeight = 720#480
 
         #================#
         # Read Filenames    
@@ -45,7 +58,7 @@ class DataAugmentation():
         self.datanames2 = os.listdir(self.BackgroundDIR)
 
         self.json_data = np.zeros([self.obj_number,1]).astype(np.str)
-        self.json_name=np.zeros([self.obj_number,1]).astype(np.str)
+        self.json_name = np.zeros([self.obj_number,1]).astype(np.str)
         self.oldbackground_data = np.zeros([self.obj_number,1]).astype(np.str)        
         self.newbackground_data = np.zeros([self.obj_number,1]).astype(np.str)        
         self.output_data = np.zeros([self.obj_number,1]).astype(np.str)        
@@ -55,6 +68,7 @@ class DataAugmentation():
         m = 0
 
         for dataname in self.datanames1:
+            print(dataname)
             if os.path.splitext(dataname)[1] == '.json': #original_data目录下包含.json的文件
                 self.json_data[i] = dataname
                 print("aaa,".join(self.json_data[i]))
@@ -62,7 +76,7 @@ class DataAugmentation():
                 i+=1
               
         for dataname in self.datanames1:
-            if os.path.splitext(dataname)[1] == '.png': #original_data目录下包含.png/.jpg的文件
+            if os.path.splitext(dataname)[1] == '.jpg': #original_data目录下包含.png/.jpg的文件
                 self.oldbackground_data[m] = dataname
                 m+=1
 
@@ -72,11 +86,14 @@ class DataAugmentation():
                 j+=1
                
     def _changeLight(self, img):
+        """Inits SampleClass with blah."""
         alpha = random.uniform(0.35, 1)
         blank = np.zeros(img.shape, img.dtype)
         return cv2.addWeighted(img, alpha, blank, 1 - alpha, 0)
 
     def generate_data(self):
+        """Inits SampleClass with blah."""
+
         for k in range(len([name for name in os.listdir(self.BackgroundDIR) if os.path.isfile(os.path.join(self.BackgroundDIR, name))])):
 
             newbackground = cv2.imread(self.BackgroundDIR + '/{}'.format(",".join(self.newbackground_data[k])))  # 读取图片img2
@@ -120,6 +137,8 @@ class DataAugmentation():
                 # Label, InverseLabel    
                 #=====================#
                 label = cv2.imread( self.PNGDIR + '/{}.png'.format(",".join(self.json_name[j])))
+                # cv2.imshow('label',label)
+                # cv2.waitKey(0)
                 label = cv2.resize(label, (self.imgWidth, self.imgHeight))
 
                 inv_label = 255 - label
@@ -127,7 +146,7 @@ class DataAugmentation():
                 #================#
                 # Extract Object    
                 #================#
-                oldbackground = cv2.imread(self.InputDIR +'/{}.png'.format(",".join(self.json_name[j]))) #oldbackground_data-->json_name
+                oldbackground = cv2.imread(self.InputDIR +'/{}.jpg'.format(",".join(self.json_name[j]))) #oldbackground_data-->json_name
                 oldbackground = cv2.resize(oldbackground, (self.imgWidth, self.imgHeight))
                 oldbackground = cv2.cvtColor(oldbackground, cv2.COLOR_BGR2RGB)        
 
@@ -136,7 +155,7 @@ class DataAugmentation():
                 #=======================#
                 # Extract NewBackground    
                 #=======================#
-                newbackground = self._changeLight(newbackground)
+                # newbackground = self._changeLight(newbackground)
 
                 imgBackground = cv2.bitwise_and(inv_label, newbackground)
         
